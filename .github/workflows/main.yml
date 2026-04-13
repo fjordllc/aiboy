@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Ruby ${{ matrix.ruby }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Ruby 3.2 is listed in the gemspec as the minimum runtime version,
+        # but the dev toolchain (rubocop -> parallel 2.0+) now requires 3.3+,
+        # so we only exercise CI on 3.3 and 3.4. End users installing `aiboy`
+        # as a library on Ruby 3.2 still work because the single runtime
+        # dependency (rubyboy) supports it.
+        ruby:
+          - '3.3'
+          - '3.4'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SDL2 and build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential libsdl2-dev libgl1-mesa-dev libgmp-dev libfontconfig1-dev
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Run rake (rspec + rubocop)
+        run: bundle exec rake

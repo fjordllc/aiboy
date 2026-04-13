@@ -1,0 +1,60 @@
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+
+Lint/AmbiguousOperatorPrecedence:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false
+
+Layout/LineLength:
+  Enabled: false
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockNesting:
+  Enabled: false
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/ParameterLists:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Naming/MethodParameterName:
+  Enabled: false
+
+# CPU flag accessors (flag_z / flag_n / flag_h / flag_c) return booleans
+# but are called on hot paths; appending `?` would ripple through the CPU
+# core with no upstream benefit. Same reasoning for the Apu private helper.
+Naming/PredicateMethod:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/FormatString:
+  Enabled: false
+
+Style/MultipleComparison:
+  Enabled: false
+
+Style/NumericLiterals:
+  Enabled: false
+
+Style/NumericPredicate:
+  EnforcedStyle: comparison
