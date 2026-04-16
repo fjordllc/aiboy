@@ -36,6 +36,23 @@ RSpec.describe Aiboy::BinaryServer do
       expect(body.getbyte(0)).to eq(0)
     end
 
+    it 'reads and updates emulation speed' do
+      status, body = call(described_class::OP_GET_SPEED)
+      expect(status).to eq(0x00)
+      expect(body.unpack1('E')).to eq(1.0)
+
+      status, body = call(described_class::OP_SET_SPEED, [4.0].pack('E'))
+      expect(status).to eq(0x00)
+      expect(body.unpack1('E')).to eq(4.0)
+      expect(emulator.speed).to eq(4.0)
+    end
+
+    it 'rejects speed outside the AI range' do
+      status, body = call(described_class::OP_SET_SPEED, [9.0].pack('E'))
+      expect(status).to eq(0xFF)
+      expect(body).to include('between 1.0 and 8.0')
+    end
+
     it 'reads a single byte from cartridge ROM on READ_BYTE' do
       status, body = call(described_class::OP_READ_BYTE, [0x0104].pack('v'))
       expect(status).to eq(0x00)
@@ -102,6 +119,23 @@ RSpec.describe Aiboy::HttpServer do
       status, _, body = server.call('POST', '/step')
       expect(status).to eq(200)
       expect(JSON.parse(body)).to include('window_should_close' => false)
+    end
+
+    it 'reads and updates emulation speed via /speed' do
+      status, _, body = server.call('GET', '/speed')
+      expect(status).to eq(200)
+      expect(JSON.parse(body)).to include('speed' => 1.0)
+
+      status, _, body = server.call('POST', '/speed', JSON.generate(speed: 8))
+      expect(status).to eq(200)
+      expect(JSON.parse(body)).to include('speed' => 8.0)
+      expect(emulator.speed).to eq(8.0)
+    end
+
+    it 'rejects invalid emulation speed via /speed' do
+      status, _, body = server.call('POST', '/speed', JSON.generate(speed: 0))
+      expect(status).to eq(400)
+      expect(JSON.parse(body)['error']).to match(/between 1.0 and 8.0/)
     end
 
     it 'reads memory via GET /memory with a hex address' do
@@ -207,6 +241,12 @@ RSpec.describe Aiboy::EmulatorHeadless do
     it 'exposes a 160x144 framebuffer' do
       emulator.step_frame
       expect(emulator.framebuffer.length).to eq(160 * 144)
+    end
+
+    it 'stores the emulation speed multiplier' do
+      expect(emulator.speed).to eq(1.0)
+      expect(emulator.set_speed(2)).to eq(2.0)
+      expect(emulator.speed).to eq(2.0)
     end
 
     it 'treats #press as a replacement of the held button set' do

@@ -23,6 +23,7 @@ module Aiboy
       select: [:action, 2],
       start: [:action, 3]
     }.freeze
+    SPEED_RANGE = (1.0..8.0)
 
     # Read a single byte from the emulated memory bus. Routing to
     # ROM / VRAM / WRAM / OAM / HRAM / I/O registers is automatic.
@@ -86,6 +87,23 @@ module Aiboy
       apply_button_state(0b1111, 0b1111)
     end
 
+    # Current emulation speed multiplier. 1.0 is normal speed; 2.0, 4.0,
+    # and 8.0 are useful for fast AI runs and shorter integration tests.
+    def speed
+      @speed || 1.0
+    end
+
+    # Set the emulation speed multiplier. Visible Rubyboy emulators use this
+    # to adjust frame pacing; headless emulators retain the value for API
+    # symmetry because they already run as fast as the host can step frames.
+    # rubocop:disable Naming/AccessorMethodName
+    def set_speed(speed)
+      normalized = normalize_ai_speed(speed)
+      apply_speed(normalized)
+      normalized
+    end
+    # rubocop:enable Naming/AccessorMethodName
+
     # The current 160x144 framebuffer as a flat Array of 23,040 Integers.
     # Each pixel is a 32-bit value in SDL_PIXELFORMAT_ABGR8888:
     #
@@ -102,6 +120,19 @@ module Aiboy
     end
 
     private
+
+    def normalize_ai_speed(speed)
+      normalized = Float(speed)
+      raise ArgumentError, 'speed must be between 1.0 and 8.0' unless SPEED_RANGE.cover?(normalized) && normalized.finite?
+
+      normalized
+    rescue ArgumentError, TypeError
+      raise ArgumentError, 'speed must be between 1.0 and 8.0'
+    end
+
+    def apply_speed(speed)
+      @speed = speed
+    end
 
     def apply_button_state(direction, action)
       @direction_state = direction

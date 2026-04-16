@@ -16,6 +16,7 @@ module Aiboy
       super
       @direction_state = 0b1111
       @action_state = 0b1111
+      @speed ||= 1.0
     end
 
     # Advance exactly one rendered frame. Keeps the SDL window open and
@@ -26,7 +27,8 @@ module Aiboy
       loop do
         cycles = @cpu.exec
         @timer.step(cycles)
-        @audio.queue(@apu.samples) if @apu.step(cycles)
+        samples_ready = @apu.step(cycles)
+        @audio.queue(@apu.samples) if samples_ready && speed <= 1.0
         next unless @ppu.step(cycles)
 
         @lcd.draw(@ppu.buffer)
@@ -34,6 +36,14 @@ module Aiboy
         return @lcd.window_should_close?
       end
     end
+
+    # rubocop:disable Naming/AccessorMethodName
+    def set_speed(speed)
+      normalized = normalize_ai_speed(speed)
+      super(normalized, announce: false)
+      normalized
+    end
+    # rubocop:enable Naming/AccessorMethodName
 
     def window_should_close?
       @lcd.window_should_close?
@@ -55,6 +65,7 @@ module Aiboy
       @joypad = @bus.instance_variable_get(:@joypad)
       @direction_state = 0b1111
       @action_state = 0b1111
+      @speed ||= 1.0
     end
 
     def step_frame

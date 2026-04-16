@@ -7,6 +7,7 @@ Aiboy is a thin wrapper gem that **requires rubyboy** and reopens `Rubyboy::Emul
 - Step the emulator one rendered frame at a time without polling the keyboard
 - Read arbitrary bytes from the emulated memory bus
 - Drive the joypad programmatically (press / hold / release)
+- Change emulation speed from 1× up to 8× for faster AI runs and tests
 - Grab the 160×144 framebuffer as pixels
 
 All CPU / PPU / APU / cartridge logic is provided entirely by rubyboy. For the underlying emulator's features (interactive keyboard play, ROM compatibility, WASM build, keybindings, etc.) see the [rubyboy README](https://github.com/sacckey/rubyboy#readme).
@@ -21,7 +22,7 @@ This also installs `rubyboy` as a dependency.
 
 ## What Aiboy adds
 
-- **`Aiboy::AiInterface`** ([`lib/aiboy/ai_interface.rb`](./lib/aiboy/ai_interface.rb)) — a mixin included into `Rubyboy::Emulator` and `Rubyboy::EmulatorHeadless`. Methods: `#read_byte` / `#read_bytes`, `#press` / `#hold` / `#release` / `#release_all`, `#framebuffer`.
+- **`Aiboy::AiInterface`** ([`lib/aiboy/ai_interface.rb`](./lib/aiboy/ai_interface.rb)) — a mixin included into `Rubyboy::Emulator` and `Rubyboy::EmulatorHeadless`. Methods: `#read_byte` / `#read_bytes`, `#press` / `#hold` / `#release` / `#release_all`, `#speed` / `#set_speed`, `#framebuffer`.
 - **`#step_frame`** — added to both rubyboy emulator classes. Advances exactly one rendered frame without polling the keyboard, so button state comes entirely from the AiInterface methods. On `Rubyboy::Emulator` also `#window_should_close?` / `#close_window`.
 - **`aiboy-server`** ([`exe/aiboy-server`](./exe/aiboy-server)) — a CLI that boots a rubyboy emulator and exposes the AiInterface operations over TCP so agents in any language can drive it:
   - **Binary protocol** (default, port `9877`) — length-prefixed frames, tens of thousands of ops/sec on localhost. See [`lib/aiboy/binary_server.rb`](./lib/aiboy/binary_server.rb).
@@ -36,6 +37,7 @@ require 'aiboy'
 
 emu = Aiboy::EmulatorHeadless.new('path/to/game.gb')
 
+emu.set_speed(4) # 4x; accepts 1.0 through 8.0
 emu.hold(%i[a])
 60.times { emu.step_frame }
 emu.release_all
@@ -52,12 +54,15 @@ Start `aiboy-server` and talk to it over the binary or HTTP protocol — no Ruby
 aiboy-server path/to/game.gb                  # binary protocol on 127.0.0.1:9877 (default)
 aiboy-server path/to/game.gb --protocol http  # HTTP/JSON on 127.0.0.1:9876
 aiboy-server path/to/game.gb --visible        # also open an SDL window
+aiboy-server path/to/game.gb --speed 8        # initial speed multiplier
 ```
 
 ### HTTP: a quick look from the shell
 
 ```sh
 curl -X POST http://127.0.0.1:9876/step
+curl -X POST -H 'Content-Type: application/json' \
+  -d '{"speed":4}' http://127.0.0.1:9876/speed
 curl 'http://127.0.0.1:9876/memory?addr=0xD361&length=1'
 curl -X POST -H 'Content-Type: application/json' \
   -d '{"buttons":["a","right"]}' http://127.0.0.1:9876/press
@@ -89,7 +94,7 @@ with socket.create_connection(("127.0.0.1", 9877)) as sock:
     print("player_x =", player_x)
 ```
 
-The binary protocol pushes tens of thousands of ops/sec on localhost — the per-call cost is dominated by the emulator step itself. Full opcode list and button bitmask are in [`lib/aiboy/binary_server.rb`](./lib/aiboy/binary_server.rb).
+The binary protocol pushes tens of thousands of ops/sec on localhost — the per-call cost is dominated by the emulator step itself. The binary protocol also exposes `GET_SPEED` (`0x0C`) and `SET_SPEED` (`0x0D`, little-endian f64 speed). Full opcode list and button bitmask are in [`lib/aiboy/binary_server.rb`](./lib/aiboy/binary_server.rb).
 
 ## Credits
 

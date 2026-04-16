@@ -35,6 +35,8 @@ module Aiboy
   #     0x09 RELEASE_ALL                                → empty
   #     0x0A FRAMEBUFFER                                → 92_160 bytes raw ABGR8888
   #     0x0B QUIT                                       → empty (server closes the connection)
+  #     0x0C GET_SPEED                                  → speed:f64le
+  #     0x0D SET_SPEED         args: speed:f64le        → speed:f64le
   #
   # Button bitmask (u8), one bit per button:
   #
@@ -63,6 +65,8 @@ module Aiboy
     OP_RELEASE_ALL  = 0x09
     OP_FRAMEBUFFER  = 0x0A
     OP_QUIT         = 0x0B
+    OP_GET_SPEED    = 0x0C
+    OP_SET_SPEED    = 0x0D
 
     BUTTON_ORDER = %i[right left up down a b select start].freeze
 
@@ -121,7 +125,9 @@ module Aiboy
       OP_RELEASE => :handle_release,
       OP_RELEASE_ALL => :handle_release_all,
       OP_FRAMEBUFFER => :handle_framebuffer,
-      OP_QUIT => :handle_quit
+      OP_QUIT => :handle_quit,
+      OP_GET_SPEED => :handle_get_speed,
+      OP_SET_SPEED => :handle_set_speed
     }.freeze
     private_constant :HANDLERS
 
@@ -231,6 +237,16 @@ module Aiboy
 
     def handle_quit(_args)
       ''.b
+    end
+
+    def handle_get_speed(_args)
+      [@emulator.speed].pack('E')
+    end
+
+    def handle_set_speed(args)
+      raise ArgumentError, 'SET_SPEED needs speed:f64le' if args.bytesize < 8
+
+      [@emulator.set_speed(args.unpack1('E'))].pack('E')
     end
 
     def decode_button_mask(args)

@@ -62,6 +62,10 @@ module Aiboy
       when 'POST /step'
         should_close = @emulator.step_frame ? true : false
         json_ok(window_should_close: should_close)
+      when 'GET /speed'
+        json_ok(speed: @emulator.speed)
+      when 'POST /speed'
+        handle_speed(body)
       when 'GET /memory'
         handle_memory(query)
       when 'POST /press'
@@ -134,6 +138,13 @@ module Aiboy
       client.write("Connection: close\r\n")
       client.write("\r\n")
       client.write(body)
+    end
+
+    def handle_speed(body)
+      payload = body && !body.empty? ? JSON.parse(body) : {}
+      raise ArgumentError, 'speed is required' unless payload.key?('speed')
+
+      json_ok(speed: @emulator.set_speed(payload['speed']))
     end
 
     def handle_memory(query)

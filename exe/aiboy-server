@@ -8,7 +8,8 @@ options = {
   protocol: :binary,
   host: nil,
   port: nil,
-  visible: false
+  visible: false,
+  speed: 1.0
 }
 
 parser = OptionParser.new do |opts|
@@ -21,6 +22,7 @@ parser = OptionParser.new do |opts|
   opts.on('-p', '--port PORT', Integer, 'Port (default depends on protocol)') { |v| options[:port] = v }
   opts.on('-b', '--bind HOST', String, 'Bind address (default: 127.0.0.1)') { |v| options[:host] = v }
   opts.on('--visible', 'Open an SDL window alongside the server (default: headless)') { options[:visible] = true }
+  opts.on('--speed SPEED', Float, 'Initial emulation speed, 1.0 to 8.0 (default: 1.0)') { |v| options[:speed] = v }
   opts.on('-h', '--help', 'Show this help') do
     puts opts
     exit
@@ -43,7 +45,7 @@ unless rom_path
 end
 
 emulator_class = options[:visible] ? Aiboy::Emulator : Aiboy::EmulatorHeadless
-emulator = emulator_class.new(rom_path)
+emulator = emulator_class.new(rom_path).tap { |emu| emu.set_speed(options[:speed]) }
 
 server_class = options[:protocol] == :http ? Aiboy::HttpServer : Aiboy::BinaryServer
 host = options[:host] || server_class::DEFAULT_HOST
