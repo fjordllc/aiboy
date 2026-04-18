@@ -28,7 +28,7 @@ module Aiboy
         cycles = @cpu.exec
         @timer.step(cycles)
         samples_ready = @apu.step(cycles)
-        @audio.queue(@apu.samples) if samples_ready && speed <= 1.0
+        @audio.queue(@apu.samples) if samples_ready && speed <= 1.0 && ENV['PJORD_AUDIO'] != '0'
         next unless @ppu.step(cycles)
 
         @lcd.draw(@ppu.buffer)
@@ -37,13 +37,11 @@ module Aiboy
       end
     end
 
-    # rubocop:disable Naming/AccessorMethodName
-    def set_speed(speed)
+    def set_speed(speed, announce: false)
       normalized = normalize_ai_speed(speed)
-      super(normalized, announce: false)
+      super(normalized, announce:)
       normalized
     end
-    # rubocop:enable Naming/AccessorMethodName
 
     def window_should_close?
       @lcd.window_should_close?
